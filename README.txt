@@ -1,6 +1,6 @@
 
 
-Food Delivery App
+Food Delivery App - Admin and User side APIs
 
 To Order food online from the restaurants
 
