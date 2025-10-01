@@ -1,5 +1,6 @@
 package com.pratik.fooddelivery.food_delivery_app.controller;
 
+import com.pratik.fooddelivery.food_delivery_app.exceptions.InvalidIdException;
 import com.pratik.fooddelivery.food_delivery_app.fooddetail.Food;
 import com.pratik.fooddelivery.food_delivery_app.fooddetail.FoodDetailDao;
 import com.pratik.fooddelivery.food_delivery_app.foodservice.FoodDetailServiceImpl;
@@ -9,10 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 public class FoodDetailsController {
@@ -56,27 +54,11 @@ public class FoodDetailsController {
     }
 
     @GetMapping("/food/{id}")
-    public ResponseEntity<?> getFoodItemById(@PathVariable int id) {
-        try {
-            Optional<Food> fooditem = foodDetailService.getFoodById(id);
+    public ResponseEntity<?> getFoodItemById(@PathVariable int id) throws InvalidIdException {
+        Optional<Food> foodItem = foodDetailService.getFoodById(id);
+        return foodItem.map(ResponseEntity::ok)
+                .orElseThrow(() -> new InvalidIdException("Food item with id " + id + " not found"));
 
-            if (fooditem.isPresent()) {
-                return ResponseEntity.ok(fooditem.get());
-            } else {
-                Map<String, Object> response = new HashMap<>();
-                response.put("success", false);
-                response.put("message", "Food item not found with ID: " + id);
-                response.put("data", null);
-                return ResponseEntity.ok(response);
-            }
-
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Error while fetching food item: " + e.getMessage());
-            response.put("data", null);
-            return ResponseEntity.ok(response);
-        }
     }
 
     @PostMapping("/addFoodItem")
@@ -96,35 +78,24 @@ public class FoodDetailsController {
 
 
     @PutMapping("/food/{id}")
-    public ResponseEntity<?> updateFoodItem(@PathVariable int id, @Valid @RequestBody Food food) {
-        try {
-            Food foodItem = foodDetailService.updateFood(id, food);
-            return ResponseEntity.status(HttpStatus.CREATED).body("Food item with Id :"+ foodItem.getId()+ " update successfully");
-        } catch (Exception e) {
-            Map<String, Object> errorBody = new HashMap<>();
-            errorBody.put("success", false);
-            errorBody.put("message", "Failed to update food item: " + e.getMessage());
-            errorBody.put("data", null);
+    public ResponseEntity<?> updateFoodItem(@PathVariable int id, @Valid @RequestBody Food food) throws InvalidIdException {
 
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorBody);
-        }
+            Food foodItem = foodDetailService.updateFood(id, food);
+            if(Objects.nonNull(foodItem)) {
+                return ResponseEntity.status(HttpStatus.CREATED).body("Food item with Id :" + foodItem.getId() + " update successfully");
+            } else {
+                throw new InvalidIdException("Food item with id " + id + " not found");
+            }
+
     }
 
     @DeleteMapping("/food/{id}")
-    public ResponseEntity<?> removeFoodItemById(@PathVariable int id)  {
-        try {
+    public ResponseEntity<?> removeFoodItemById(@PathVariable int id) throws InvalidIdException {
             boolean isDeleted = foodDetailService.deleteFood(id);
             if(isDeleted) {
             return ResponseEntity.status(HttpStatus.CREATED).body("Food item with Id :"+ id + " deleted successfully");
+            } else {
+                throw new InvalidIdException("Food item with id " + id + " not found");
             }
-        } catch (Exception e) {
-            Map<String, Object> errorBody = new HashMap<>();
-            errorBody.put("success", false);
-            errorBody.put("message", "Failed to delete food item: " + e.getMessage());
-            errorBody.put("data", null);
-
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorBody);
-        }
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).body("No Id Found");
     }
 }
